@@ -35,10 +35,13 @@ class Song(): # A song object combines a song file location and relevant data
         self.titles = [titles[0]]
         for title in titles: # Subtitles of a song are considered optional;
             if "(" in title and ")" in title and title.index("(") < title.index(")"):
-                self.titles.append(simplify(title[:title.index("(")]+title[title.index(")"):]))
-            self.titles.append(simplify(title)) # e.g. "(Sittin' On) The Dock of the Bay"
-        self.artist = artist # could be entered as "the dock of the bay" or
-        self.hint = hint     # "sittin on the dock of the bay" in strict mode.
+                nosubtitle = simplify(title[:title.index("(")]+title[title.index(")"):])
+                if nosubtitle not in self.titles:  # e.g. "(Sittin' On) The Dock
+                    self.titles.append(nosubtitle) # of the Bay" could be entered
+            if simplify(title) not in self.titles: # as "the dock of the bay"
+                self.titles.append(simplify(title)) # or "sittin on the dock of
+        self.artist = artist                       # the bay" in strict mode.
+        self.hint = hint
         if os.path.isfile(fileloc):
             self.fileloc = fileloc
         else: # This error does not typically occur, as the file is checked elsewhere.
@@ -271,6 +274,7 @@ class PlayWindow(tk.Toplevel): # Plays the game assigned to it by the MainMenuWi
         self.mainlabeltext.set('All players buzzed in!')
 
     def passong(self):
+        self.unbuzz()
         self.buzzed.set(True)
 
     def scoreupdate(self):
@@ -317,14 +321,14 @@ class PlayWindow(tk.Toplevel): # Plays the game assigned to it by the MainMenuWi
             answindow = AnswerWindow(guessername,self,songobject,self.acceptance)
             answindow.grab_set()
             self.wait_window(answindow)
-        self.unbuzz()
-        if len(self.labellist[0].cget('text')) > 0 and self.labellist[0].cget('text')[0] == '⭕':
-            self.scores[guesserid] += 1 # Using this text to evaluate could - in a rare case -
-            self.times[guesserid] += endtime - starttime # make any wrong guess counted as right
-        else:                                            # if the song title begins with the
-            self.scores[guesserid] -= 1                  # red circle emoji.
-            self.times[guesserid] += endtime - starttime
-        self.scoreupdate()
+            self.unbuzz()
+            if len(self.labellist[0].cget('text')) > 0 and self.labellist[0].cget('text')[0] == '⭕':
+                self.scores[guesserid] += 1 # Using this text to evaluate could - in a rare case -
+                self.times[guesserid] += endtime - starttime # make any wrong guess counted as right
+            else:                                            # if the song title begins with the
+                self.scores[guesserid] -= 1                  # red circle emoji.
+                self.times[guesserid] += endtime - starttime
+            self.scoreupdate()
 
     def run_game(self):
         self.namefill()
@@ -575,7 +579,7 @@ class GameEditWindow(tk.Toplevel): # Allows for the editing of a game (as a list
 
         numsongs_label = tk.Label(self,text="Songs:  0")
         numsongs_label.grid(column=0, row=1, columnspan=2,sticky=tk.W, padx=5, pady=5)
-        self.active_directory = '/'
+        self.active_directory = './Music' # Can be '/' for guaranteed folder existence.
         scroller = ttk.Scrollbar(self)
         scroller.grid(column=3,row=1,rowspan=9,sticky=tk.NS)
         song_list = tk.Listbox(self,width=30,yscrollcommand=scroller.set,selectmode=tk.MULTIPLE)
@@ -755,7 +759,6 @@ class MainMenuWindow(tk.Tk): # The main menu has three methods:  one for loading
             self.withdraw()
             gsw = GameSettingsWindow()
             ACCEPTANCE, CONTESTANT = gsw.bearfruit()
-            print(f"Acceptance: {ACCEPTANCE}")
             gsw.destroy()
             if ACCEPTANCE in ['strict','inclusive','loose']:
                 self.wait_window(PlayWindow(self,ACCEPTANCE,CONTESTANT,game).run_game())
